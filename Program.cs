@@ -73,11 +73,11 @@ class SimpleServer
             switch (request.HttpMethod.ToUpper())
             {
                 case "GET":
-                    _geminiApi.ProcessGeminiRequest(request, response);
+                    ProcessGet(request, response);
                     break;
                 
                 case "POST":
-                    SendResponse(response, "Task received", HttpStatusCode.OK);
+                    ProcessPost(request, response);
                     break;
 
                 default:
@@ -96,9 +96,32 @@ class SimpleServer
         }
     }
 
+    private void ProcessGet(HttpListenerRequest request, HttpListenerResponse response)
+    {
+        var path = Uri.UnescapeDataString(request.Url.AbsolutePath);
+        string staticPart = "/api/data=";
+
+        switch (path.StartsWith(staticPart) ? staticPart : null)
+        {
+            case "/api/data":
+                var promt = request.QueryString["promt"];
+                Console.WriteLine(promt);
+                var apiCall = _geminiApi.ProcessGeminiRequest(promt, response);
+                SendResponse(apiCall.Item1, apiCall.Item2, apiCall.Item3);
+                break;
+        }
+    }
+
+    private void ProcessPost(HttpListenerRequest request, HttpListenerResponse response)
+    {
+        SendResponse(response, "Task received", HttpStatusCode.OK);
+    }
+    
+    
+
     private void SendResponse(HttpListenerResponse response, string message, HttpStatusCode statusCode)
     {
-        byte[] buffer = Encoding.UTF8.GetBytes(message);
+        var buffer = Encoding.UTF8.GetBytes(message);
 
         response.StatusCode = (int)statusCode;
         response.ContentType = "text/plain";
@@ -112,7 +135,7 @@ class Program
 {
     static void Main(string[] args)
     {
-        string url = "http://localhost:8080/"; 
+        var url = "http://localhost:8080/"; 
 
         var server = new SimpleServer(url);
         server.Start();

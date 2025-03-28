@@ -16,33 +16,24 @@ class GeminiApi
         _geminiApiKey = geminiApiKey;
     }
     
-    public (HttpListenerResponse, string, HttpStatusCode) ProcessGeminiRequest(HttpListenerRequest request, HttpListenerResponse response)
+    public (HttpListenerResponse, string, HttpStatusCode) ProcessGeminiRequest(string request, HttpListenerResponse response)
     {
-        if (!request.HasEntityBody)
+        var requestData = JsonConvert.DeserializeObject<GeminiRequest>(request);
+
+        if (string.IsNullOrWhiteSpace(requestData?.Prompt))
         {
-            return (response, "No body provided", HttpStatusCode.BadRequest);
+            return (response, "Promt should exist", HttpStatusCode.BadRequest);
         }
-
-        using (StreamReader reader = new StreamReader(request.InputStream, request.ContentEncoding))
-        {
-            string requestBody = reader.ReadToEnd();
-            var requestData = JsonConvert.DeserializeObject<GeminiRequest>(requestBody);
-
-            if (string.IsNullOrWhiteSpace(requestData?.Prompt))
-            {
-                return (response, "Promt should be", HttpStatusCode.BadRequest);
-            }
             
-            string geminiResponse = SimulateGeminiApiCall(requestData.Prompt); //ToDO: pizda
+        string geminiResponse = SimulateGeminiApiCall(requestData.Prompt); //ToDO: pizda
 
-            var responseData = new
-            {
-                generated_text = geminiResponse,
-                timestamp = DateTime.UtcNow
-            };
+        var responseData = new
+        {
+            generated_text = geminiResponse,
+            timestamp = DateTime.UtcNow
+        };
 
-            return (response, JsonConvert.SerializeObject(responseData), HttpStatusCode.OK);
-        }
+        return (response, JsonConvert.SerializeObject(responseData), HttpStatusCode.OK);
     }
 
     private string SimulateGeminiApiCall(string prompt)
