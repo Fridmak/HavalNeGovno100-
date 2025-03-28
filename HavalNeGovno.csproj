@@ -9,6 +9,7 @@
 
     <ItemGroup>
       <PackageReference Include="AutoGen.Gemini" Version="0.2.1" />
+      <PackageReference Include="DotNetEnv" Version="3.1.1" />
     </ItemGroup>
 
 </Project>

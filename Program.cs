@@ -1,25 +1,28 @@
-﻿using System;
-using System.Net;
+﻿using System.Net;
 using System.Text;
-using System.Threading;
+using GeminiServer;
+using DotNetEnv;
 
 namespace Server;
 class SimpleServer
 {
     private readonly HttpListener _listener;
     private readonly string _url;
+    private readonly GeminiApi _geminiApi;
 
     public SimpleServer(string url)
     {
+        Env.Load();
         _url = url;
         _listener = new HttpListener();
         _listener.Prefixes.Add(url);
+        _geminiApi = new GeminiApi(Env.GetString("KEY"));
     }
 
     public void Start()
     {
         _listener.Start();
-        Console.WriteLine($"Сервер запущен и слушает {_url}");
+        Console.WriteLine($"Server started and listens to: {_url}");
 
         Thread listenerThread = new Thread(Listen);
         listenerThread.Start();
@@ -28,7 +31,7 @@ class SimpleServer
     public void Stop()
     {
         _listener.Stop();
-        Console.WriteLine("Сервер остановлен");
+        Console.WriteLine("Server stopped");
     }
 
     private void Listen()
@@ -46,16 +49,16 @@ class SimpleServer
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Ошибка при обработке запроса: {ex.Message}");
+                        Console.WriteLine($"Error proccesing task: {ex.Message}");
                     }
                 });
             }
             catch (HttpListenerException ex)
             {
                 if (ex.ErrorCode == 995) 
-                    Console.WriteLine("Сервер завершает работу...");
+                    Console.WriteLine("Server shutdown...");
                 else
-                    Console.WriteLine($"Ошибка: {ex.Message}");
+                    Console.WriteLine($"Error: {ex.Message}");
             }
         }
     }
@@ -70,6 +73,9 @@ class SimpleServer
             switch (request.HttpMethod.ToUpper())
             {
                 case "GET":
+                    _geminiApi.ProcessGeminiRequest(request, response);
+                    break;
+                
                 case "POST":
                     SendResponse(response, "Task received", HttpStatusCode.OK);
                     break;
@@ -111,7 +117,7 @@ class Program
         var server = new SimpleServer(url);
         server.Start();
 
-        Console.WriteLine("Нажмите любую клавишу для остановки сервера...");
+        Console.WriteLine("Press any key to stop the server...");
         Console.ReadKey();
 
         server.Stop();
